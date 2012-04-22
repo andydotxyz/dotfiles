@@ -1,0 +1,117 @@
+# A zsh prompt by Andrew Williams
+# With thanks to many examples, howtos and other published prompt files
+
+setopt prompt_subst
+
+tilde_or_pwd() {
+  echo $PWD | sed -e "s/\/Users\/$USER/~/"
+}
+function precmd {
+    local TERMWIDTH
+    (( TERMWIDTH = ${COLUMNS} - 1 ))
+
+    host=$(hostname | sed -e "s/[\.].*//")
+    user=$(whoami)
+    date=$(date)
+
+    let textsize=$(echo -n "${user}@${host}${date}" | wc -c | tr -d " ")
+    let gap=${TERMWIDTH}-${textsize}
+    fill=" "
+    while [ "$gap" -gt "0" ] 
+    do 
+        fill="${fill} "
+	let gap=${gap}-1
+    done
+
+    if [[ ${user} == 'root' ]]; then
+        usercol='\033[31;1m'
+    else
+        usercol='\033[0;36m'
+    fi
+    echo "$usercol$user\e[0;90m@$host$fill$date"
+}
+
+function load_out() {
+  echo -n "$(uptime | sed -e "s/.*averages: \(.*\...\) \(.*\...\) \(.*\...\).*/\1/" -e "s/ //g")"
+}
+
+function load_color() {
+  gray=0
+  red=1
+  green=2
+  yellow=3
+  blue=4
+  magenta=5
+  cyan=6
+  white=7
+
+  # Colour progression is important ...
+  #   bold gray -> bold green -> bold yellow -> bold red -> 
+  #   black on red -> bold white on red
+  #
+  # Then we have to choose the values at which the colours switch, with
+  # anything past yellow being pretty important.
+
+  tmp=$(echo "$(load_out)*100" | bc)
+  let load100=${tmp%.*}
+
+  if [ ${load100} -lt 100 ]; then
+#    tput setaf ${gray}
+  elif [ ${load100} -lt 150 ]; then
+    tput setaf ${green}
+  elif [ ${load100} -lt 200 ]; then
+    tput setaf ${yellow}
+  elif [ ${load100} -lt 300 ]; then
+    tput setaf ${red}
+  elif [ ${load100} -lt 500 ]; then
+    tput setaf ${white} ; tput setab ${red}
+  else
+    tput bold ; tput setaf ${white} ; tput setab ${red}
+  fi
+}
+
+disk_free() {
+  df -hl | sed '1d' | awk '{print $5}' | sed -e 's/%/%%/g' 
+}
+
+function disk_color() {
+  red=1
+  green=2
+  yellow=3
+
+  tmp=$(echo "$(disk_free)" | sed -e 's/%//g')
+  let freeperc=${tmp%.*}
+
+  if [ ${freeperc} -lt 70 ]; then
+#    tput setaf ${gray}
+  elif [ ${freeperc} -lt 80 ]; then
+    tput setaf ${green}
+  elif [ ${freeperc} -lt 90 ]; then
+    tput setaf ${yellow}
+  else
+    tput setaf ${red}
+  fi
+}
+
+term() {
+  echo $TERM
+}
+
+status() {
+  RET=$(echo $?)
+  if [ $RET -eq 0 ]; then
+    RET_COL='\033[0;32m'
+  else
+    RET_COL='\033[0;31m'
+  fi
+
+  echo "\e[0;90m[exit:$RET_COL$RET\e[0;90m] [load:$(load_color)$(load_out)\e[0;90m] [disk:$(disk_color)$(disk_free)\e[0;90m] [term:$(term)]"
+}
+
+terminfo_down_sc=$terminfo[cud1]$terminfo[cuu1]$terminfo[sc]$terminfo[cud1]
+
+export PROMPT=$'%{$terminfo_down_sc$(status)$terminfo[rc]%}%{\e[0m%}%{\e[0;%(?.32.31)m%}>%{\e[0m%} '
+export RPROMPT=$'%{\e[0;90m%}$(tilde_or_pwd)$(scm_cwd_info)%{\e[0m%}'
+
+preexec () { print -rn -- $terminfo[el]; }
+

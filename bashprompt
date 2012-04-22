@@ -1,0 +1,176 @@
+#!/bin/bash
+
+# Bash prompt "stretchPro" by Andrew Williams - created 29 December 2010
+#   derived from termwide prompt with tty number by Giles - created 2 November 98
+#   and many others from http://www.gilesorr.com/bashprompt/prompts/
+# Updated 21 April 2012 to include SCM info
+
+function prompt_command {
+
+RET=$?
+TERMWIDTH=${COLUMNS}
+
+#   Calculate the width of the prompt:
+
+hostnam=$(echo -n $HOSTNAME | sed -e "s/[\.].*//")
+#   "whoami" and "pwd" include a trailing newline
+usernam=$(whoami)
+if [ `whoami` == 'root' ]; then
+    usernam='root'
+else
+    usernam="$(whoami)@$hostnam"
+fi
+cur_tty=$(tty | sed -e "s/.*tty\(.*\)/\1/")
+newPWD="${PWD}"
+
+local cur_tty=$(tty | sed -e "s/.*tty\(.*\)/\1/")
+
+#   Add all the accessories below ...
+let promptsize=$(echo -n "-(${usernam}:${cur_tty})---[1:12]---[\!,$RET]---(${PWD})-" \
+                 | wc -c | tr -d " ")
+let fillsize=${TERMWIDTH}-${promptsize}-1
+fill="-"
+while [ "$fillsize" -gt "0" ] 
+do 
+    fill="${fill}-"
+	let fillsize=${fillsize}-1
+done
+
+if [ "$fillsize" -lt "0" ]
+then
+   let cut=3-${fillsize}
+	newPWD="...$(echo -n $PWD | sed -e "s/\(^.\{$cut\}\)\(.*\)/\2/")"
+fi
+
+# add scm info
+scmprompt=`scm_cwd_info | sed 's/%{//g' | sed 's/%}//g' | cut -c 2-`
+scmprompttext=`scm_cwd_info | sed -E 's/'$(echo -e "\033")'\[[0-9]{1,2}(;([0-9]{1,2})?)?[mK]//g' | sed 's/%{//g' | sed 's/%}//g' | sed 's/✗/x/g' | cut -c 2-`
+let prompt2size=$(echo "${scmprompttext}" | wc -c | tr -d " ")
+let fill2size=${TERMWIDTH}-${prompt2size}-$(date | wc -c | tr -d " ")-7
+fill2=" "
+while [ "$fill2size" -gt "0" ]
+do
+    fill2="${fill2} "
+    let fill2size=${fill2size}-1
+done
+
+if [ "$fill2size" -lt "0" ]
+then
+   scmprompt="..."
+   let fill2size=${fill2size}+${prompt2size}
+
+    while [ "$fill2size" -gt "0" ]
+    do
+        fill2="${fill2} "
+        let fill2size=${fill2size}-1
+    done
+fi
+
+twtty
+}
+
+PROMPT_COMMAND=prompt_command
+
+function load_out() {
+  echo -n "$(uptime | sed -e "s/.*averages: \(.*\...\) \(.*\...\) \(.*\...\).*/\1/" -e "s/ //g")"
+}
+
+function load_color() {
+  gray=0
+  red=1
+  green=2
+  yellow=3
+  blue=4
+  magenta=5
+  cyan=6
+  white=7
+
+  # Colour progression is important ...
+  #   bold gray -> bold green -> bold yellow -> bold red -> 
+  #   black on red -> bold white on red
+  #
+  # Then we have to choose the values at which the colours switch, with
+  # anything past yellow being pretty important.
+
+  tmp=$(echo $(load_out)*100 | bc)
+  let load100=${tmp%.*}
+
+  if [ ${load100} -lt 70 ]
+  then
+    tput bold ; tput setaf ${white}
+  elif [ ${load100} -ge 70 ] && [ ${load100} -lt 120 ]
+  then
+    tput bold ; tput setaf ${green}
+  elif [ ${load100} -ge 120 ] && [ ${load100} -lt 200 ]
+  then
+    tput bold ; tput setaf ${yellow}
+  elif [ ${load100} -ge 200 ] && [ ${load100} -lt 300 ]
+  then
+    tput bold ; tput setaf ${red}
+  elif [ ${load100} -ge 300 ] && [ ${load100} -lt 500 ]
+  then
+    tput setaf ${white} ; tput setab ${red}
+  else
+    tput bold ; tput setaf ${white} ; tput setab ${red}
+  fi
+}
+
+function twtty {
+local GRAY="\[\033[1;30m\]"
+local LIGHT_GRAY="\[\033[0;37m\]"
+local WHITE="\[\033[1;37m\]"
+local NO_COLOUR="\[\033[0m\]"
+
+local LIGHT_BLUE="\[\033[1;34m\]"
+local YELLOW="\[\033[1;33m\]"
+
+local GREEN="\[\033[32;1m\]"
+local RED="\[\033[31;1m\]"
+local DETAIL=$NO_COLOUR
+
+case $TERM in
+    xterm*)
+        TITLEBAR='\[\033]0;\u@\h:\w\007\]'
+        ;;
+    *)
+        TITLEBAR=""
+        ;;
+esac
+
+if [ `whoami` == 'root' ]; then
+  USR=$RED
+else
+  USR=$GREEN
+fi
+
+local cur_tty=$(tty | sed -e "s/.*tty\(.*\)/\1/")
+
+if [[ $RET -eq 0 ]]; then
+    RET_COL=$GREEN
+else
+    RET_COL=$RED
+fi
+
+PS1="$TITLEBAR\
+$LIGHT_BLUE-(\
+$USR\$usernam$LIGHT_BLUE:$WHITE\$cur_tty\
+${LIGHT_BLUE})-${GRAY}-\
+\
+${LIGHT_BLUE}-[\[\$(load_color)\]\$(load_out)${NO_COLOUR}${LIGHT_BLUE}]-${GRAY}-\
+${LIGHT_BLUE}-[$GREEN\!,$RET_COL$RET$LIGHT_BLUE]-\
+\
+${GRAY}${fill}${LIGHT_BLUE}-(\
+$YELLOW\${newPWD}\
+$LIGHT_BLUE)-\
+\n\
+$LIGHT_BLUE-(\
+$YELLOW\$(date)$LIGHT_BLUE)-${fill2}-(\
+${GRAY}\${scmprompt}${LIGHT_BLUE})-\
+\n\
+$LIGHT_BLUE->\
+$NO_COLOUR " 
+
+PS2="$LIGHT_BLUE-$YELLOW-$YELLOW-$NO_COLOUR "
+
+}
+

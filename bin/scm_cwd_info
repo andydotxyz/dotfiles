@@ -1,0 +1,11 @@
+# SCM info for cwd - try git, hg then svn for possible info...
+
+git_cwd_info 
+if [ $? -ne 0 ]; then
+  hg_cwd_info
+
+  if [ $? -ne 0 ]; then
+    svn_cwd_info
+  fi
+fi
+

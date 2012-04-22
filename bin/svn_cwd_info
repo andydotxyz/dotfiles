@@ -1,0 +1,25 @@
+#!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
+# SVN info for cwd
+# Based on a git script by Ben Hoskings - https://github.com/benhoskings/dot-files/blob/master/files/bin/git_cwd_info
+
+def in_svn_repo
+  File.exists?('.svn')
+end
+
+def svn_parse_branch
+  `svn info | grep '^URL:' | egrep -o '(tags|branches)/[^/]+|trunk' | egrep -o '[^/]+$'`.strip
+end
+
+def svn_head_commit_id
+  `svn info | grep Revision 2>/dev/null | egrep -o ' (.+)'`.strip
+end
+
+def svn_cwd_dirty
+  " %{\e[90m%}✗%{\e[0m%}" unless `svn st | grep -v "^?"`.strip.empty?
+end
+
+if in_svn_repo
+  print " svn:%{\e[34m%}#{svn_parse_branch}%{\e[90m%}@%{\e[33m%}#{svn_head_commit_id}%{\e[0m%}#{svn_cwd_dirty}"
+end
+
