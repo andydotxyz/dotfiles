@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 # -*- coding: utf-8 -*-
-# Mercurial info for cwd
 # Based on a git script by Ben Hoskings - https://github.com/benhoskings/dot-files/blob/master/files/bin/git_cwd_info
 
 def hg_repo_path
@@ -19,7 +18,7 @@ def hg_parse_branch
 end
 
 def git_head_commit_id
-  `hexdump -n 6 -e '1/1 "%02x"' .hg/dirstate`.strip
+  `hexdump -n 6 -e '1/1 "%02x"' #{hg_repo_path}/dirstate`.strip
   # or, for the local number use this instead:
   #`hg id -n`.strip
 end
