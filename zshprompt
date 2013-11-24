@@ -32,7 +32,7 @@ function precmd {
 }
 
 function load_out() {
-  echo -n "$(uptime | sed -e "s/.*averages: \(.*\...\) \(.*\...\) \(.*\...\).*/\1/" -e "s/ //g")"
+  echo -n "$(uptime | awk -F'[ ,]' '{print $14}')"
 }
 
 function load_color() {
