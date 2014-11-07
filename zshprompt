@@ -32,7 +32,7 @@ function precmd {
 }
 
 function load_out() {
-  echo -n "$(uptime | awk -F': ' '{print $2}')" | awk -F', ' '{print $1}'
+  echo -n "$(uptime | awk -F': ' '{print $2}')" | awk -F'[, ]' '{print $1}'
 }
 
 function load_color() {
