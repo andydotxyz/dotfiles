@@ -8,5 +8,5 @@ My handy and cool configs
 
 How my zsh prompt looks:
 
-![](https://github.com/handyande/dotfiles/raw/master/doc/zshprompt.png)
+![](https://github.com/ajwillia-ms/dotfiles/raw/master/doc/zshprompt.png)
 
