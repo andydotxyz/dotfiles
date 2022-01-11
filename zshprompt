@@ -71,7 +71,7 @@ function load_color() {
 }
 
 disk_free() {
-  df -hl | sed '1d' | sed '2,99d' | awk '{print $5}' | sed -e 's/%/%%/g' 
+  df -hl 2>&1 | grep -v "not permitted" | sed '1d' | sed '2,99d' | awk '{print $5}' | sed -e 's/%/%%/g' 
 }
 
 function disk_color() {
